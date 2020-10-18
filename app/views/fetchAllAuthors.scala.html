@@ -1,0 +1,24 @@
+@(output: Html, authorAddForm: Form[AuthorAddForm], authorDeleteForm: Form[AuthorDeleteForm])(implicit request: RequestHeader, messagesProvider: MessagesProvider)
+
+@import helper._
+
+@main("Authors") {
+
+<h1>List of authors:</h1>
+@output
+
+<h1>Add author</h1>
+
+@form(action = helper.CSRF(routes.AuthorController.addAuthor())) {
+@inputText(authorAddForm("first_name"))
+@inputText(authorAddForm("last_name"))
+<input type="submit" value="Submit">
+}
+
+<h1>Delete author</h1>
+
+@form(action = helper.CSRF(routes.AuthorController.deleteAuthor())) {
+@inputText(authorDeleteForm("id"))
+<input type="submit" value="Submit">
+}
+}
