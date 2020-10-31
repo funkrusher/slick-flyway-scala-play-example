@@ -16,6 +16,7 @@ libraryDependencies ++= Seq(
     "org.flywaydb" %% "flyway-play" % "5.2.0",
     "org.mariadb.jdbc" % "mariadb-java-client" % "2.4.3",
     "com.typesafe.play" %% "play-slick" % "3.0.0",
+    "org.scalaz" %% "scalaz-core" % "7.3.2",
     specs2 % Test
 )
 

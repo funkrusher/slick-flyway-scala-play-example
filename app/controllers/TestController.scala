@@ -8,8 +8,10 @@ import play.api.i18n.I18nSupport
 import play.api.libs.json.Json
 import play.api.mvc.{AbstractController, Action, AnyContent, ControllerComponents}
 import slick.jdbc.JdbcProfile
+import util.{QueryParamFilterModel, QueryParamModel, QueryParamSorterModel}
 
 import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.Future
 
 @Singleton
 class TestController @Inject()(
@@ -100,4 +102,65 @@ class TestController @Inject()(
                 ))
         })
     }
+
+    /**
+     * Tests query-params
+     *
+     * @return success-status
+     */
+    def test7: Action[AnyContent] = Action.async { implicit request =>
+
+        // TODO resolve queryParamModel from GET-Request Query-Params Deserialized
+        val qParam = QueryParamModel(
+            drop = Some(0),
+            take = Some(10),
+            sorter = Some(QueryParamSorterModel(
+                sortOrder = "asc",
+                sortName = "last_name"
+            )),
+            filters = Some(Seq(QueryParamFilterModel(
+                tableName = "Author",
+                filterName = "first_name",
+                filterValue = "George",
+                filterComparator = "like"
+            )))
+        )
+
+        val result = for {
+            filteredAuthorIds <- filterAuthorIds(qParam)
+            count <- authorRepository.doPaginationCount(qParam, filteredAuthorIds)
+            data <- authorRepository.doPaginationExtended(qParam, filteredAuthorIds)
+        } yield (count, data)
+
+        result.map({
+            case (count, data) =>
+                Ok(Json.obj(
+                    "count" -> count,
+                    "data" -> data
+                ))
+        })
+    }
+
+
+    /**
+     * Returns a list of all authorIds that correspond to the given filters list.
+     *
+     * @param qParam
+     * @return
+     */
+    def filterAuthorIds(qParam: QueryParamModel): Future[Option[Seq[Int]]] = {
+
+        // we need to search all relevant tables here, that can have filter-conditions on it.
+        val result = for {
+            authorIds1 <- bookRepository.filterAuthorIds(qParam)
+            authorIds2 <- authorRepository.filterAuthorIds(qParam)
+
+        } yield (authorIds1, authorIds2)
+
+        // return all authorIds that we have found in the different tables of the author-relations.
+        result.flatMap(x => {
+            Future(Some(x._1 ++ x._2))
+        })
+    }
+
 }

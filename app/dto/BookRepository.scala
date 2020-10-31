@@ -4,6 +4,7 @@ import dto.models.BookModel
 import javax.inject.{Inject, Singleton}
 import play.api.db.slick.DatabaseConfigProvider
 import slick.jdbc.JdbcProfile
+import util.QueryParamModel
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -54,6 +55,39 @@ class BookRepository @Inject()(
         } yield (b)
         db.run(innerJoin.result)
     }
+
+    /**
+     * Returns the authorIds filtered by the given filters.
+     *
+     * @param qParam
+     * @return authorIds for filters.
+     */
+    def filterAuthorIds(
+                         qParam: QueryParamModel): Future[Seq[Int]] = {
+
+        val query = for {
+            a <- book.filter(x => {
+                // OR-condition filter for all relevant filters that have to be done on this table.
+                // TODO we may need to check other kinds of filterTypes later on.
+
+                val default = LiteralColumn(1) === LiteralColumn(1)
+
+                val condition1: Option[Rep[Option[Boolean]]] = qParam.findFilterByName("Book", "title") match {
+                    case Some(filter) => Some(x.title.like(filter.filterValue))
+                    case _ => None
+                }
+                // bundle all found filters with OR-criteria
+                val res: Rep[Option[Boolean]] = List(
+                    condition1
+                ).collect({ case Some(it) => it }).reduceLeftOption((x, y) => x || y).getOrElse(default)
+                res
+            })
+
+        } yield (a.id)
+
+        db.run(query.result);
+    }
+
 
     /**
      * Here we define the table. It will have a name of people
