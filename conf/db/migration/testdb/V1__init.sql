@@ -50,6 +50,36 @@ INSERT INTO author (id, first_name, last_name, date_of_birth    , year_of_birth)
   VALUES           (1 , 'George'  , 'Orwell' , DATE '1903-06-26', 1903         );
 INSERT INTO author (id, first_name, last_name, date_of_birth    , year_of_birth)
   VALUES           (2 , 'Paulo'   , 'Coelho' , DATE '1947-08-24', 1947         );
+INSERT INTO author (id, first_name, last_name, date_of_birth    , year_of_birth)
+  VALUES           (3 , 'Robert'  , 'Musil' , DATE '1903-06-26', 1903         );
+INSERT INTO author (id, first_name, last_name, date_of_birth    , year_of_birth)
+  VALUES           (4 , 'Claudia Simone'   , 'Dorchain' , DATE '1947-08-24', 1947);
+INSERT INTO author (id, first_name, last_name, date_of_birth    , year_of_birth)
+  VALUES           (5 , 'Georgia'  , 'Agamben' , DATE '1903-06-26', 1903);
+INSERT INTO author (id, first_name, last_name, date_of_birth    , year_of_birth)
+  VALUES           (6 , 'Leo'   , 'Tolstoi' , DATE '1947-08-24', 1947);
+INSERT INTO author (id, first_name, last_name, date_of_birth    , year_of_birth)
+  VALUES           (7 , 'Fjodor'  , 'Dostojewski' , DATE '1903-06-26', 1903);
+INSERT INTO author (id, first_name, last_name, date_of_birth    , year_of_birth)
+  VALUES           (8 , 'Franz'   , 'Kafka' , DATE '1947-08-24', 1947         );
+INSERT INTO author (id, first_name, last_name, date_of_birth    , year_of_birth)
+  VALUES           (9 , 'Hermann'  , 'Hesse' , DATE '1903-06-26', 1903         );
+INSERT INTO author (id, first_name, last_name, date_of_birth    , year_of_birth)
+  VALUES           (10 , 'Thomas'   , 'Mann' , DATE '1947-08-24', 1947         );
+INSERT INTO author (id, first_name, last_name, date_of_birth    , year_of_birth)
+  VALUES           (11 , 'Sybille'  , 'Berg' , DATE '1903-06-26', 1903         );
+INSERT INTO author (id, first_name, last_name, date_of_birth    , year_of_birth)
+  VALUES           (12 , 'Julia'   , 'Zeh' , DATE '1947-08-24', 1947         );
+INSERT INTO author (id, first_name, last_name, date_of_birth    , year_of_birth)
+  VALUES           (13 , 'Frank'  , 'Herbert' , DATE '1903-06-26', 1903);
+INSERT INTO author (id, first_name, last_name, date_of_birth    , year_of_birth)
+  VALUES           (14 , 'Michael'   , 'Hedges' , DATE '1947-08-24', 1947);
+INSERT INTO author (id, first_name, last_name, date_of_birth    , year_of_birth)
+  VALUES           (15 , 'Anna'  , 'Sutter' , DATE '1903-06-26', 1903         );
+INSERT INTO author (id, first_name, last_name, date_of_birth    , year_of_birth)
+  VALUES           (16 , 'Rainer'   , 'Mai' , DATE '1947-08-24', 1947         );
+
+
 
 INSERT INTO book (id, author_id, title         , published_in, language_id)
   VALUES         (1 , 1        , '1984'        , 1948        , 1          );
@@ -58,7 +88,21 @@ INSERT INTO book (id, author_id, title         , published_in, language_id)
 INSERT INTO book (id, author_id, title         , published_in, language_id)
   VALUES         (3 , 2        , 'O Alquimista', 1988        , 4          );
 INSERT INTO book (id, author_id, title         , published_in, language_id)
-  VALUES         (4 , 2        , 'Brida'       , 1990        , 2          );
+  VALUES         (4 , 3        , 'Brida1'       , 1990        , 2          );
+INSERT INTO book (id, author_id, title         , published_in, language_id)
+  VALUES         (5 , 3        , 'Brida2'       , 1990        , 2          );
+INSERT INTO book (id, author_id, title         , published_in, language_id)
+  VALUES         (6 , 4        , 'Brida3'       , 1990        , 2          );
+INSERT INTO book (id, author_id, title         , published_in, language_id)
+  VALUES         (7 , 8        , 'Brida4'       , 1990        , 2          );
+INSERT INTO book (id, author_id, title         , published_in, language_id)
+  VALUES         (8 , 8        , 'Brida5'       , 1990        , 2          );
+INSERT INTO book (id, author_id, title         , published_in, language_id)
+  VALUES         (9 , 9        , 'Brida6'       , 1990        , 2          );
+INSERT INTO book (id, author_id, title         , published_in, language_id)
+  VALUES         (10 , 10        , 'Brida7'       , 1990        , 2          );
+
+
 
 INSERT INTO book_store VALUES ('Orell Füssli');
 INSERT INTO book_store VALUES ('Ex Libris');

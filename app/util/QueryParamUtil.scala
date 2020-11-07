@@ -6,13 +6,15 @@ import play.api.db.slick.{DatabaseConfigProvider, HasDatabaseConfigProvider}
 import slick.ast.Ordering
 import slick.ast.Ordering.Direction
 import slick.jdbc.JdbcProfile
-import slick.lifted.{ColumnOrdered, Ordered, Rep}
+import slick.lifted.ColumnOrdered
 
 
 /**
  * Helper-trait for dynamic field-selection of models (use this trait in your model)
  */
 trait QueryParamFieldSelector {
+
+    import slick.lifted.Rep
 
     // The runtime map between string names and table columns
     // the field-names must be exactly as given by the frontend
@@ -52,7 +54,7 @@ class QueryParamUtil @Inject()(protected val dbConfigProvider: DatabaseConfigPro
             if (queryParamModel.sorter.get.sortOrder.equals("desc")) {
                 ordering = Ordering.Desc;
             }
-            val sortOrderRep: Rep[_] => Ordered = ColumnOrdered(_, Ordering(ordering))
+            val sortOrderRep: Rep[_] => ColumnOrdered[_] = ColumnOrdered(_, Ordering(ordering))
             val sortColumnRep: A => Rep[_] = _.queryParamFields(queryParamModel.sorter.get.sortName)
             extendedQuery = extendedQuery.sortBy(sortColumnRep)(sortOrderRep)
         }

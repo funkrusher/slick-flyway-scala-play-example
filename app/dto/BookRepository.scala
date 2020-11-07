@@ -33,6 +33,23 @@ class BookRepository @Inject()(
      */
     val book = TableQuery[BookTable]
 
+    def fetchById(id: Int): Future[Option[BookModel]] = {
+        db.run(fetchByIdAction(id));
+    }
+
+    def fetchByIdAction(id: Int): DBIO[Option[BookModel]] = {
+        book.filter(_.id === id).result.headOption
+    }
+
+    def insertMany(input: Seq[BookModel]) = {
+        db.run(book ++= input)
+    }
+
+    def fetchByAuthors(authorIds: Seq[Int]): Future[Seq[BookModel]] = {
+        db.run(book.filter(z => z.author_id.inSet(authorIds)).result)
+    }
+
+
     /**
      * returns a list of book-records
      *
@@ -70,7 +87,7 @@ class BookRepository @Inject()(
                 // OR-condition filter for all relevant filters that have to be done on this table.
                 // TODO we may need to check other kinds of filterTypes later on.
 
-                val default = LiteralColumn(1) === LiteralColumn(1)
+                val default = LiteralColumn(1) === LiteralColumn(0)
 
                 val condition1: Option[Rep[Option[Boolean]]] = qParam.findFilterByName("Book", "title") match {
                     case Some(filter) => Some(x.title.like(filter.filterValue))

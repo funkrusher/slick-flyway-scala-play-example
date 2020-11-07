@@ -5,10 +5,10 @@ import java.sql.Date
 import dto.models.{AuthorApi, AuthorModel}
 import javax.inject.{Inject, Singleton}
 import play.api.db.slick.DatabaseConfigProvider
-import scalaz.{-\/, \/, \/-}
 import slick.ast.Ordering
 import slick.ast.Ordering.Direction
-import slick.jdbc.JdbcProfile
+import slick.basic.DatabasePublisher
+import slick.jdbc.{JdbcProfile, ResultSetConcurrency, ResultSetType}
 import slick.lifted.ColumnOrdered
 import util.QueryParamModel
 import util.SlickImplictHelpers._
@@ -78,6 +78,10 @@ class AuthorRepository @Inject()(
         ((author returning author.map(_.id) into ((u, insertId) => input.copy(id = insertId))) += input)
     }
 
+    def insertMany(input: Seq[AuthorModel]) = {
+        db.run(author ++= input)
+    }
+
 
     /**
      * Returns the authorIds filtered by the given filters.
@@ -87,13 +91,12 @@ class AuthorRepository @Inject()(
      */
     def filterAuthorIds(
                          qParam: QueryParamModel): Future[Seq[Int]] = {
-
         val query = for {
             a <- author.filter(x => {
                 // OR-condition filter for all relevant filters that have to be done on this table.
                 // TODO we may need to check other kinds of filterTypes later on.
 
-                val default = LiteralColumn(1) === LiteralColumn(1)
+                val default = LiteralColumn(1) === LiteralColumn(0)
 
                 val condition1: Option[Rep[Option[Boolean]]] = qParam.findFilterByName("Author", "first_name") match {
                     case Some(filter) => Some(x.first_name.like(filter.filterValue))
@@ -116,7 +119,6 @@ class AuthorRepository @Inject()(
         db.run(query.result);
     }
 
-
     /**
      * Returns the total count for the pagination
      *
@@ -124,42 +126,19 @@ class AuthorRepository @Inject()(
      * @param filteredAuthorIds filteredAuthorIds
      * @return count
      */
-    def doPaginationCount(
-                           qParam: QueryParamModel,
-                           filteredAuthorIds: Option[Seq[Int]]): Future[Int] = {
-        doPaginationExtended(qParam, filteredAuthorIds, isCount = true) match {
-            case \/-(result) => result
-            case _ => Future(0)
-        }
+    def countAuthorApis(
+                         qParam: QueryParamModel,
+                         filteredAuthorIds: Option[Seq[Int]]): Future[Int] = {
+
+        val query = getAuthorQuery(qParam, filteredAuthorIds);
+
+        // return the count (no 1:n joins are allowed, because we need to count)
+        db.run(query.size.result)
     }
 
-    /**
-     * Returns all authors in a specific pagination-window (starting with offset)
-     *
-     * @param qParam            qParam
-     * @param filteredAuthorIds filteredAuthorIds
-     * @return authors of pagination-window
-     */
-    def doPaginationExtended(
-                              qParam: QueryParamModel,
-                              filteredAuthorIds: Option[Seq[Int]]): Future[Seq[AuthorApi]] = {
-        doPaginationExtended(qParam, filteredAuthorIds, isCount = false) match {
-            case -\/(result) => result
-            case _ => Future(Seq())
-        }
-    }
-
-    /**
-     * Returns all authors in a specific pagination-window (starting with offset)
-     *
-     * @param qParam            qParam
-     * @param filteredAuthorIds filterRegulationIds
-     * @return authors or count
-     */
-    private def doPaginationExtended(
-                                      qParam: QueryParamModel,
-                                      filteredAuthorIds: Option[Seq[Int]],
-                                      isCount: Boolean): Future[Seq[AuthorApi]] \/ Future[Int] = {
+    private def getAuthorQuery(
+                                qParam: QueryParamModel,
+                                filteredAuthorIds: Option[Seq[Int]]): Query[AuthorTable, AuthorModel, Seq] = {
 
         // query-params:
         // - we filter and sort on the author-table
@@ -181,7 +160,7 @@ class AuthorRepository @Inject()(
             if (qParam.sorter.get.sortOrder.equals("desc")) {
                 ordering = Ordering.Desc;
             }
-            val sortOrderRep: Rep[_] => ColumnOrdered[Any] = ColumnOrdered(_, Ordering(ordering))
+            val sortOrderRep: Rep[_] => ColumnOrdered[_] = ColumnOrdered(_, Ordering(ordering))
 
             if (qParam.sorter.get.sortName == "first_name") {
                 query = query.sortBy(_.first_name)(sortOrderRep);
@@ -189,33 +168,55 @@ class AuthorRepository @Inject()(
                 query = query.sortBy(_.last_name)(sortOrderRep);
             }
         }
-
-        if (isCount) {
-            // return the count (no 1:n joins are allowed, because we need to count)
-            \/-(db.run(query.size.result))
-
-        } else {
-            // paginate the filtered and sorted result now.
-            query = query.drop(qParam.drop.getOrElse(-1)).take(qParam.take.getOrElse(-1))
-
-            // after we have done the pagination we can join additional tables into the result.
-            val queryExtended = for {
-                (query, books) <- (query
-                  joinLeft bookRepository.book on (_.id === _.author_id)
-                  )
-            } yield (query, books)
-
-            // note: i must use our own custom "groupByOrdered" function, because scala "groupBy"
-            // would loose our already sorted insertion-order otherwise.
-            -\/(db.run(queryExtended.result).map(_.groupByOrdered(_._1).map {
-                case (author, composedResult) =>
-                    author.toApi.copy(
-                        books = Option(composedResult.groupBy(_._2).flatMap(_._1).toSeq)
-                    )
-            }.toSeq))
-        }
+        query;
     }
 
+    /**
+     * Returns all authors in a specific pagination-window (starting with offset)
+     *
+     * @param qParam            qParam
+     * @param filteredAuthorIds filteredAuthorIds
+     * @return authors of pagination-window
+     */
+    def fetchAuthorApis(
+                         qParam: QueryParamModel,
+                         filteredAuthorIds: Option[Seq[Int]]): Future[Seq[AuthorApi]] = {
+
+        // paginate the filtered and sorted result now.
+        val query = getAuthorQuery(qParam, filteredAuthorIds)
+          .drop(qParam.drop.getOrElse(-1)).take(qParam.take.getOrElse(-1))
+
+        // after we have done the pagination we can join additional tables into the result.
+        val queryExtended = for {
+            (query, books) <- (query
+              joinLeft bookRepository.book on (_.id === _.author_id)
+              )
+        } yield (query, books)
+
+        // note: i must use our own custom "groupByOrdered" function, because scala "groupBy"
+        // would loose our already sorted insertion-order otherwise.
+        db.run(queryExtended.result).map(_.groupByOrdered(_._1).map {
+            case (author, composedResult) =>
+                author.toApi.copy(
+                    books = Option(composedResult.groupBy(_._2).flatMap(_._1).toSeq)
+                )
+        }.toSeq)
+    }
+
+    def getAuthorPublisher(
+                            qParam: QueryParamModel,
+                            filteredAuthorIds: Option[Seq[Int]]): DatabasePublisher[AuthorModel] = {
+        // we want to fetch the data from the database in chunks of 3000 items per network-response from db to us.
+        db.stream(
+            getAuthorQuery(qParam, filteredAuthorIds)
+              .result
+              .withStatementParameters(
+                  rsType = ResultSetType.ForwardOnly,
+                  rsConcurrency = ResultSetConcurrency.ReadOnly,
+                  fetchSize = 3000)
+              .transactionally
+        )
+    }
 
     /**
      * Here we define the table. It will have a name of people
@@ -234,7 +235,7 @@ class AuthorRepository @Inject()(
           .tupled, AuthorModel.unapply)
 
         /** The ID column, which is the primary key, and auto incremented */
-        def id = column[Int]("id", O.PrimaryKey, O.AutoInc)
+        def id: Rep[Int] = column[Int]("id", O.PrimaryKey, O.AutoInc)
 
         /** The first_name column */
         def first_name = column[Option[String]]("first_name")

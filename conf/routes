@@ -11,8 +11,11 @@ GET     /slick/author               controllers.AuthorController.fetchAllAuthors
 POST    /slick/author               controllers.AuthorController.addAuthor
 POST    /slick/author/delete        controllers.AuthorController.deleteAuthor
 
+GET     /slick/test2                controllers.TestController.test2
 GET     /slick/test5                controllers.TestController.test5
 GET     /slick/test6                controllers.TestController.test6
+GET     /slick/test7                controllers.TestController.test7
+GET     /slick/test8                controllers.TestController.test8
 
 # Map static resources from the /public folder to the /assets URL path
 GET     /assets/*file               controllers.Assets.versioned(path="/public", file: Asset)
