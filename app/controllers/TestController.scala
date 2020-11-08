@@ -209,6 +209,30 @@ class TestController @Inject()(
         })
     }
 
+    /**
+     * Returns a list of all authorIds that correspond to the given filters list.
+     *
+     * @param qParam
+     * @return
+     */
+    def filterAuthorIds(qParam: QueryParamModel): Future[Option[Seq[Int]]] = {
+        if (qParam.filters.isEmpty) {
+            return Future(None)
+        }
+
+        // we need to search all relevant tables here, that can have filter-conditions on it.
+        val result = for {
+            authorIds1 <- bookRepository.filterAuthorIds(qParam)
+            authorIds2 <- authorRepository.filterAuthorIds(qParam)
+
+        } yield (authorIds1, authorIds2)
+
+        // return all authorIds that we have found in the different tables of the author-relations.
+        result.flatMap(x => {
+            Future(Some(x._1 ++ x._2))
+        })
+    }
+
     def test8: Action[AnyContent] = Action.async { implicit request =>
         // TODO resolve queryParamModel from GET-Request Query-Params Deserialized
         val qParam = QueryParamModel(
@@ -253,31 +277,6 @@ class TestController @Inject()(
         })
     }
 
-    /**
-     * Returns a list of all authorIds that correspond to the given filters list.
-     *
-     * @param qParam
-     * @return
-     */
-    def filterAuthorIds(qParam: QueryParamModel): Future[Option[Seq[Int]]] = {
-        if (qParam.filters.isEmpty) {
-            return Future(None)
-        }
-
-        // we need to search all relevant tables here, that can have filter-conditions on it.
-        val result = for {
-            authorIds1 <- bookRepository.filterAuthorIds(qParam)
-            authorIds2 <- authorRepository.filterAuthorIds(qParam)
-
-        } yield (authorIds1, authorIds2)
-
-        // return all authorIds that we have found in the different tables of the author-relations.
-        result.flatMap(x => {
-            Future(Some(x._1 ++ x._2))
-        })
-    }
-
-
     def getAuthorApiSource(publisher: DatabasePublisher[AuthorModel]): Source[AuthorApi, NotUsed] = {
         Source.fromPublisher(publisher)
           .log("test")
@@ -301,6 +300,27 @@ class TestController @Inject()(
               })
           })
           .mapConcat(s => s.toList) // flatten the chunk of 3000 items to separate items again.
+    }
+
+    /**
+     * Tests query-params
+     *
+     * @return success-status
+     */
+    def test9: Action[AnyContent] = Action.async { implicit request =>
+
+        val result = for {
+            data <- authorRepository.fetchAll
+            data2 <- bookRepository.fetchAll
+        } yield (data, data2)
+
+        result.map({
+            case (data, data2) =>
+                Ok(Json.obj(
+                    "data" -> data,
+                    "data2" -> data2
+                ))
+        })
     }
 
 
